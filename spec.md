@@ -178,3 +178,14 @@ Feature: Mission assignment
     When I attempt to assign a mission to that robot
     Then the system shall reject the assignment
     And the system shall explain why the robot cannot accept the mission
+
+# Non-Functional Requirements
+The system shall maintain at least 99.9% availability during scheduled operating hours, excluding planned maintenance, to ensure continuous robot fleet monitoring and management.
+
+The system shall update robot status and telemetry information on the operator dashboard within 2 seconds of receiving the data under normal operating conditions.
+
+The system shall communicate emergency stop and pause commands to connected robots within 1 second of operator initiation and clearly indicate whether each command has been acknowledged or successfully executed.
+
+The system shall enforce role-based access control and authenticated communication to ensure that only authorized users can configure robots, assign missions, initiate stop commands, or update robot software.
+
+The system shall support the addition of at least 100 robots without requiring architectural redesign and while maintaining the specified performance requirements under the expected workload.
