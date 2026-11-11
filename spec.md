@@ -72,7 +72,7 @@ As an Engineer, I want the platform to collect and display real-time robot telem
 
 FR-005: Access Sensor Information
 
-As an Engineer, I want to access available sensor status and sensor data so that I can investigate sensor-related and navigation problems.
+As an Engineer, I want to access available sensor status and identify sensors reporting a fault so that I can investigate sensor-related and navigation problems.
 
 FR-006: Assign a Mission
 
@@ -81,6 +81,14 @@ As a Robot Operator, I want to assign a mission to an available robot so that th
 
 
 # Acceptance Criteria
+Definitions used in the acceptance criteria:
+
+- Required configuration: a robot identifier and a software version. Operating parameters, sensor settings, and sensors are optional.
+- Valid telemetry: telemetry from a registered robot in which any reported battery level is between 0 and 100 percent.
+- Status freshness timeout: STATUS_FRESHNESS_TIMEOUT seconds. Status information older than this is unavailable. The value is set by the project team.
+- Available robot: a registered robot whose status information is current, whose latest reported mission status is idle, and to which no mission has been assigned since that status was reported.
+- Valid task or destination information: a mission in which at least one of the task or the destination is not empty.
+
 AC-001: Register and Configure Robot
 
 Related requirement: FR-001
@@ -99,6 +107,12 @@ Feature: Robot registration and configuration
     When I attempt to register another robot with that identifier
     Then the system shall reject the registration
     And the system shall explain that the identifier already exists
+
+  Scenario: Reject registration without required configuration
+    Given I am logged in as an Engineer
+    When I submit a registration that is missing required configuration
+    Then the system shall reject the registration
+    And the system shall identify the missing information
 
 AC-002: View Robot Configuration
 
@@ -128,7 +142,7 @@ Feature: Robot status monitoring
     And the system shall display its operational and mission status
 
   Scenario: Display unavailable status information
-    Given a robot is registered but its status information is unavailable
+    Given a robot is registered but its status information is unavailable or older than the status freshness timeout
     When I view the robot on the dashboard
     Then the system shall indicate that the status information is unavailable
     And the system shall not present outdated information as current
@@ -144,6 +158,12 @@ Feature: Robot telemetry collection
     When the robot transmits valid telemetry
     Then the system shall record the received telemetry
     And the system shall make the latest telemetry available for viewing
+
+  Scenario: Reject invalid telemetry
+    Given a registered robot is connected to the platform
+    When the robot transmits telemetry that is not valid
+    Then the system shall not record the telemetry
+    And the previously recorded telemetry shall remain the latest telemetry
 
 AC-005: Access Sensor Information
 
@@ -178,6 +198,13 @@ Feature: Mission assignment
     When I attempt to assign a mission to that robot
     Then the system shall reject the assignment
     And the system shall explain why the robot cannot accept the mission
+
+  Scenario: Reject a mission without task or destination information
+    Given I am logged in as a Robot Operator
+    And a robot is available for a new mission
+    When I assign a mission that has neither a task nor a destination
+    Then the system shall reject the assignment
+    And the system shall explain that a task or destination is required
 
 # Non-Functional Requirements
 The system shall maintain at least 99.9% availability during scheduled operating hours, excluding planned maintenance, to ensure continuous robot fleet monitoring and management.
