@@ -2,7 +2,20 @@
 
 Each function raises `NotImplementedError` until the plan.md slice that fills it is implemented. The "Success" and "Fails with" columns describe the behaviour the implementation must provide.
 
-**Implemented so far (Slice 1):** `AccessControl.authenticate` (known credential only; rejection is Slice 3), `PersistenceStore.list_robots`, and `RobotStatusTelemetry.get_fleet_status` (the per-robot status view is Slice 4).
+**Implemented so far:**
+
+- **Slice 1:** `AccessControl.authenticate` (known credential only; rejection is Slice 3), `PersistenceStore.list_robots`, and `RobotStatusTelemetry.get_fleet_status` (the per-robot status view is Slice 4).
+- **Slice 2:** `AccessControl.require_role` (success path; `PermissionDenied` is Slice 3); `PersistenceStore.insert_robot`, `get_robot`, `append_telemetry`, `count_telemetry`, `upsert_sensor_status`; `RobotRegistry.register_robot` (valid input, with the Engineer role check) and `RobotRegistry.get_robot`; `RobotStatusTelemetry.record_telemetry` (valid input); `SensorInformation.record_sensor_status` (valid input).
+
+**Known gaps until later slices** (the rules are in the tables below but not yet enforced):
+
+| Behaviour today | Rule that will replace it | Slice |
+|---|---|---|
+| A registration with an empty identifier or software version is accepted | `InvalidRegistration` | 7 |
+| Registering an existing identifier overwrites the robot | `DuplicateRobotIdentifier` / `UniqueIdentifierViolation` | 8, 9 |
+| Telemetry with a battery level outside 0–100, or not a number, is recorded | `InvalidTelemetry` | 11, 12 |
+| Telemetry from an unregistered robot is recorded | `RobotNotFound` | 13 |
+| A sensor status for an unregistered robot or sensor is recorded | `RobotNotFound` / `SensorNotRegistered` | none yet (see plan.md) |
 
 - "Spec rule" cites `docs/spec.md` (FR / AC / NFR / **Def** = the Definitions list at the top of Acceptance Criteria) or `architecture.md` (`ARCH §n`).
 - "Injected" lists the constructor dependencies the function relies on. Every class receives its dependencies through `__init__`, so a test can replace any of them.

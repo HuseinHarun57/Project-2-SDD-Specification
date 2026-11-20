@@ -67,14 +67,14 @@ Each test is listed in the slice where it first **turns green**. Where a later s
 - **Skeleton to fill in:**
   - `AccessControl.require_role`: success path.
   - `PersistenceStore.insert_robot`, `get_robot`, `append_telemetry`, `count_telemetry`, `upsert_sensor_status`
-  - `RobotRegistry.register_robot`: valid input, Engineer user.
+  - `RobotRegistry.register_robot`: valid input, Engineer user, and the call to the Engineer role check (moved here from Slice 3 when Slice 2 was implemented, so that no other role could register robots in the meantime).
   - `RobotRegistry.get_robot`, including `RobotNotFound`.
   - `RobotStatusTelemetry.record_telemetry`: valid message from a registered robot; `received_at = clock()`.
   - `SensorInformation.record_sensor_status`: valid message.
   - Route `POST /api/v1/robots`: success response.
 - **Depends on:** Slice 1
 - **Done when:** the listed tests pass, and `test_TP_003_08` still passes.
-- **Status:** not started
+- **Status:** done (all 6 listed tests pass)
 
 ### Slice 3: Authentication and role rejection
 
@@ -85,7 +85,7 @@ Each test is listed in the slice where it first **turns green**. Where a later s
 - **Skeleton to fill in:**
   - `AccessControl.authenticate`: `AuthenticationRequired` path.
   - `AccessControl.require_role`: `PermissionDenied` path.
-  - `RobotRegistry.register_robot`: calls the Engineer role check.
+  - (`RobotRegistry.register_robot` already calls the Engineer role check since Slice 2; this slice fills the `PermissionDenied` path it reaches.)
   - Route mapping for `POST /api/v1/robots`: 401 and 403 (Design question 2).
 - **Depends on:** Slice 2
 - **Done when:** the listed tests pass and no previously passing test fails.
@@ -394,4 +394,4 @@ The tests were left unchanged.
 
 ---
 
-**Next action:** Slice 2 (fixture path). Make `test_TP_001_03` pass.
+**Next action:** Slice 3 (authentication and role rejection). Make `test_TP_001_08` pass.

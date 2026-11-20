@@ -38,6 +38,7 @@ pytest is used for the tests but is not in `requirements.txt`, so install it as 
 ```bash
 python -m pytest -q                                                    # full suite
 python -m pytest tests/test_ac003_status.py::test_TP_003_08 -v         # Slice 1
+python -m pytest -v tests/test_ac001_registration.py::test_TP_001_03 tests/test_ac001_registration.py::test_TP_001_06 tests/test_ac001_registration.py::test_TP_001_07 tests/test_ac004_telemetry.py::test_TP_004_07 tests/test_ac004_telemetry.py::test_TP_004_09 tests/test_ac004_telemetry.py::test_TP_004_11   # Slice 2
 ```
 
 ## Layout
