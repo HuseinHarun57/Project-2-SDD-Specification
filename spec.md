@@ -134,7 +134,8 @@ Related requirement: FR-003
 Feature: Robot status monitoring
 
   Scenario: View the current status of a robot
-    Given a robot is registered with the platform
+    Given I am logged in as an Engineer or a Robot Operator
+    And a robot is registered with the platform
     And the robot is transmitting status information
     When I open the fleet dashboard
     Then the system shall display the robot's latest reported location
@@ -142,7 +143,8 @@ Feature: Robot status monitoring
     And the system shall display its operational and mission status
 
   Scenario: Display unavailable status information
-    Given a robot is registered but its status information is unavailable or older than the status freshness timeout
+    Given I am logged in as an Engineer or a Robot Operator
+    And a robot is registered but its status information is unavailable or older than the status freshness timeout
     When I view the robot on the dashboard
     Then the system shall indicate that the status information is unavailable
     And the system shall not present outdated information as current

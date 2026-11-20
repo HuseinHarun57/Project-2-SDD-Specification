@@ -356,9 +356,26 @@ Feature: Robot status monitoring
       | id         | type     | shown at     | measured latency | verdict |
       | TP-003-10a | @inside  | 12:00:03.000 | 2.000 s          | pass    |
       | TP-003-10b | @outside | 12:00:03.001 | 2.001 s          | fail    |
+
+  @TP-003-11 @extra  # probes: FR-003, Slice 1 decision "any logged-in user"; gap: identity
+  Scenario: An Engineer can view the fleet dashboard
+    Given I am logged in as "eng"
+    And the clock reads 12:00:05.000
+    When I open the fleet dashboard
+    Then the dashboard shows:
+      | robot | status  | location                | battery | operational | mission |
+      | r-001 | current | warehouse-A (12.5, 3.0) | 76      | operational | idle    |
+      | r-002 | current | warehouse-A (2.0, 8.0)  | 90      | operational | idle    |
+
+  @TP-003-12 @extra  # probes: Security NFR "authenticated communication"; gap: identity
+  Scenario: Reject the dashboard when not logged in
+    Given I am not logged in ("anon")
+    When I open the fleet dashboard
+    Then the system rejects the request and displays no robot status
+    And the registered robot count is 5
 ```
 
-**Rejections:** none in AC-003, so there are no controls.
+**Rejections:** TP-003-12 is the only one. Its control is TP-003-01 (the same request by a logged-in Robot Operator).
 
 ---
 
@@ -664,7 +681,7 @@ Feature: Mission assignment
 |---|---|
 | Boundaries | TP-001-05/06/07/13, TP-003-05/06/10, TP-004-03 to 07, TP-006-02, TP-006-11 to 16 |
 | Time | TP-003-04/05/06/09/10, TP-004-02 (age measured from the last *recorded* report), TP-006-14/15/16 |
-| Identity | TP-001-02/08/10, TP-002-04/05, TP-004-08, TP-005-05/06, TP-006-07/17/18 |
+| Identity | TP-001-02/08/10, TP-002-04/05, TP-003-11/12, TP-004-08, TP-005-05/06, TP-006-07/17/18 |
 | State | TP-001-02 (no overwrite), TP-003-09, TP-005-02, TP-006-02/16 |
 | Concurrency | TP-001-12, TP-006-19 |
 | Input types | TP-004-07, TP-004-10 |
@@ -681,7 +698,6 @@ These checklist cases need an expected value the spec does not give, so they are
 | Register with identifier `""` or software version `""` | Input types | Def Required configuration | Q1 |
 | Register `R-001` or `" r-001 "` when `r-001` exists | Identity | FR-001 | Q2 |
 | Contents of a successful registration or assignment response, including any mission identifier | What is returned | AC-001, AC-006 | Q3 |
-| `anon` or `eng` opens the dashboard | Identity | FR-003, Security NFR | Q5 |
 | A record reported at 12:00:01.000 arrives after one reported at 12:00:02.000; or the reported time is in the future | Time | AC-003, AC-004 | Q7, Q10 |
 | `op` views the latest telemetry | Identity | FR-004 | Q9 |
 | Two r-001 records arrive at the same instant | Concurrency | AC-004 "latest" | Q10 |
@@ -723,7 +739,7 @@ None. AC-001 through AC-006 each name a related requirement. Note one point abou
 | Q2 | Are robot identifiers case-sensitive? Is surrounding whitespace significant? | Held-back probes |
 | Q3 | What does a successful registration or assignment return (for example, a mission identifier)? | Held-back probes |
 | Q4 | How is a request for an unregistered robot reported on reads? The scenarios assert only "rejected, nothing displayed". | TP-002-03, TP-005-07 |
-| Q5 | Who may view the dashboard? AC-003 has no login step; FR-003 names the Robot Operator; the NFR requires authenticated communication. | Held-back probes |
+| Q5 | Who may view the dashboard? **Decided for Slice 1:** any logged-in user (Engineer or Robot Operator); a user who is not logged in is rejected. | TP-003-11, TP-003-12 |
 | Q6 | What is the clock resolution for "just outside" a time limit? This plan assumes 1 ms. | TP-003-06, TP-006-15 |
 | Q7 | Is age measured from the robot's reported time or the platform's receipt time? How is a future reported time handled? | F0 sets them equal |
 | Q8 | What are "normal operating conditions" for the 2 s target? | TP-003-10 |

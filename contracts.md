@@ -1,6 +1,8 @@
 # Contracts: Autonomous Robotics Management and Navigation Software Platform
 
-Skeleton only. Every function below raises `NotImplementedError`. The "Success" and "Fails with" columns describe the behaviour the implementation must provide.
+Each function raises `NotImplementedError` until the plan.md slice that fills it is implemented. The "Success" and "Fails with" columns describe the behaviour the implementation must provide.
+
+**Implemented so far (Slice 1):** `AccessControl.authenticate` (known credential only; rejection is Slice 3), `PersistenceStore.list_robots`, and `RobotStatusTelemetry.get_fleet_status` (the per-robot status view is Slice 4).
 
 - "Spec rule" cites `docs/spec.md` (FR / AC / NFR / **Def** = the Definitions list at the top of Acceptance Criteria) or `architecture.md` (`ARCH §n`).
 - "Injected" lists the constructor dependencies the function relies on. Every class receives its dependencies through `__init__`, so a test can replace any of them.
@@ -66,6 +68,8 @@ Constructor: `AccessControl(identity_records: UserIdentityRecords)`
 
 `Role` = `ENGINEER`, `ROBOT_OPERATOR`. Not specified: the identity provider, credential format, and session policy (ARCH §5.5).
 
+**Decided for Slice 1:** the running server keeps the placeholder identity source (`UnconfiguredIdentityRecords` in `app/main.py`), so live requests return 501 until an identity source is specified. Tests inject their own.
+
 ### 2. Persistence (`app/modules/persistence.py`)
 
 Constructor: `PersistenceStore(database_url: str)`. Every method can also fail with `StorageUnavailable`.
@@ -85,7 +89,9 @@ Constructor: `PersistenceStore(database_url: str)`. Every method can also fail w
 | `get_latest_mission_assignment(robot_id) -> MissionAssignmentRecord \| None` | Newest assignment by `recorded_at`, or `None` | — | **Def** Available robot ("no mission has been assigned since that status was reported") | database |
 | `run_in_transaction(operation: Callable[[], T]) -> T` | Runs `operation` atomically and returns its result | Re-raises whatever `operation` raised, with nothing committed | ARCH §3 coordinated operation | database |
 
-Not specified: database technology, retention, and the ordering of telemetry that arrives out of order (ARCH §4, §5.2, §5.7).
+**Decided for Slice 1:** storage is in memory. Each `PersistenceStore` instance starts empty; `database_url` is kept but unused. Records are lost when the process stops.
+
+Not specified: retention, and the ordering of telemetry that arrives out of order (ARCH §4, §5.2, §5.7).
 
 ### 3. Robot Integration (`app/modules/robot_integration.py`)
 
@@ -118,12 +124,12 @@ Status is **current** when the latest telemetry exists and `clock() - received_a
 | Function | Success | Fails with | Spec rule | Injected |
 |---|---|---|---|---|
 | `record_telemetry(message: InboundTelemetry) -> TelemetryRecord` | Stores the message with `received_at = clock()` and returns it | `RobotNotFound`; `InvalidTelemetry` when `battery_level` is outside 0–100. Nothing is stored on failure, so the previous record stays the latest | FR-004; AC-004 both scenarios; **Def** Valid telemetry; Performance NFR (2 s) | `store`, `clock` |
-| `get_fleet_status(user) -> list[RobotStatusView]` | One view per registered robot | `PermissionDenied`; `StatusFreshnessTimeoutNotSet` | FR-003; AC-003; AC-001 "appear in the fleet dashboard" | `store`, `access`, `clock`, `status_freshness_timeout` |
+| `get_fleet_status(user) -> list[RobotStatusView]` | One view per registered robot. Any authenticated user may call it; there is no role check | `StatusFreshnessTimeoutNotSet` | FR-003; AC-003; AC-001 "appear in the fleet dashboard" | `store`, `access`, `clock`, `status_freshness_timeout` |
 | `get_robot_status(user, robot_id) -> RobotStatusView` | `CURRENT` with location, battery, operational status, and mission status; or `UNAVAILABLE` with those fields set to `None` | `PermissionDenied`; `RobotNotFound`; `StatusFreshnessTimeoutNotSet` | AC-003 both scenarios; **Def** Status freshness timeout | `store`, `access`, `clock`, `status_freshness_timeout` |
 | `get_latest_telemetry(user, robot_id) -> TelemetryRecord \| None` | The latest record, or `None` if none has been received | `PermissionDenied` (not Engineer); `RobotNotFound` | FR-004; AC-004 | `store`, `access` |
 | `get_mission_availability(robot_id) -> MissionAvailability` | `available=True` only if status is current, `mission_status == IDLE_MISSION_STATUS`, and the latest assignment (if any) has `recorded_at` earlier than the telemetry's `received_at`. Otherwise `available=False` with `reason` set to one of: "status information is unavailable", "robot reports an active mission", "a mission was assigned after the robot's last status report" | `RobotNotFound`; `StatusFreshnessTimeoutNotSet` | AC-006; **Def** Available robot | `store`, `clock`, `status_freshness_timeout` |
 
-Not specified: which role may view the dashboard. FR-003 names the Robot Operator, AC-003 has no "logged in" step, and Engineer access is unstated.
+**Decided for Slice 1:** any authenticated user (Engineer or Robot Operator) may view the dashboard (`get_fleet_status`). Not specified: whether `get_robot_status` follows the same rule; its row still lists `PermissionDenied`.
 
 ### 6. Sensor Information (`app/modules/sensor_information.py`)
 
@@ -172,7 +178,7 @@ A body that fails schema validation (for example, a missing `software_version`) 
 |---|---|---|---|---|---|
 | FR-001 | `POST /robots` | `{robot_id, configuration: {software_version, operating_parameters?, sensor_settings?}, sensors?: [{sensor_id, sensor_type}]}` | `RobotRegistry.register_robot` | 201 `RobotOut` | 401; 403; 400 `InvalidRegistration`; 409 `DuplicateRobotIdentifier` |
 | FR-002 | `GET /robots/{robot_id}/configuration` | — | `RobotRegistry.get_robot_configuration` | 200 `RobotConfigurationOut` | 401; 403; 404 `RobotNotFound` |
-| FR-003 | `GET /dashboard` | — | `RobotStatusTelemetry.get_fleet_status` | 200 `{robots: [RobotStatusOut]}` | 401; 403; 500 `StatusFreshnessTimeoutNotSet` |
+| FR-003 | `GET /dashboard` | — | `RobotStatusTelemetry.get_fleet_status` | 200 `{robots: [RobotStatusOut]}` | 401; 500 `StatusFreshnessTimeoutNotSet` |
 | FR-004 | `GET /robots/{robot_id}/telemetry/latest` | — | `RobotStatusTelemetry.get_latest_telemetry` | 200 `TelemetryOut`, or 200 `null` if none received | 401; 403; 404 `RobotNotFound` |
 | FR-005 | `GET /robots/{robot_id}/sensors` | — | `SensorInformation.get_sensor_statuses` | 200 `SensorReportOut` | 401; 403; 404 `RobotNotFound` |
 | FR-006 | `POST /missions` | `{robot_id, mission: {task?, destination?}}` | `MissionAssignment.assign_mission` | 201 `MissionAssignmentOut` | 401; 403; 404 `RobotNotFound`; 422 `InvalidMission`; 409 `RobotUnavailable` with `reason` |
